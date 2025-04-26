@@ -1,5 +1,131 @@
-package com.medicineordering.notification;\n\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Queue;\nimport java.util.LinkedList;\nimport java.util.HashMap;\n\n// Enum for Notification Type (used in overloaded method)\npublic enum NotificationType {\n    SMS, EMAIL, PUSH\n}\n\n// Placeholder for Template data\nclass NotificationTemplate {\n    String templateId;\n    String content;\n    NotificationType type;\n    // ... other template properties\n}\n\npublic class NotificationService {\n\n    // Properties from plan\n    private Map<String, NotificationTemplate> templates; // Key: templateId\n    private Queue<NotificationJob> notificationQueue; // Queue for async processing\n\n    // Placeholder for job details\n    private static class NotificationJob {\n        String userId;\n        String message;\n        NotificationType type;\n        // ... other details like priority, scheduled time\n    }\n\n    // Constructor\n    public NotificationService() {\n        this.templates = new HashMap<>();\n        this.notificationQueue = new LinkedList<>(); // Use LinkedList as a Queue\n        loadDefaultTemplates(); // Example initialization\n    }\n    \n    private void loadDefaultTemplates() {\n        // Example: Load some default templates\n        NotificationTemplate welcomeEmail = new NotificationTemplate();\n        welcomeEmail.templateId = \"WELCOME_EMAIL\";\n        welcomeEmail.type = NotificationType.EMAIL;\n        welcomeEmail.content = \"Welcome to our service, {name}!\";\n        templates.put(welcomeEmail.templateId, welcomeEmail);\n        \n        NotificationTemplate orderConfirmSms = new NotificationTemplate();\n        orderConfirmSms.templateId = \"ORDER_CONFIRM_SMS\";\n        orderConfirmSms.type = NotificationType.SMS;\n        orderConfirmSms.content = \"Your order {orderId} has been confirmed. Total: {amount}.\";\n        templates.put(orderConfirmSms.templateId, orderConfirmSms);\n    }\n
-    // Methods from plan (including Overloaded Methods)\n    public void sendNotification(String userId, String message) {\n        // Default to EMAIL or a preferred type if message is raw text\n        sendNotification(userId, message, NotificationType.EMAIL); \n    }\n
-    public void sendNotification(String userId, String message, NotificationType type) {\n        // TODO: Implement actual sending logic (e.g., using email/SMS APIs)\n        System.out.println(\"Sending [\" + type + \"] notification to User [\" + userId + \"]: \" + message);\n        // This could directly send or queue the job\n        // queueNotification(userId, message, type); \n    }\n    \n    public void sendNotificationFromTemplate(String userId, String templateId, Map<String, String> parameters) {\n        NotificationTemplate template = templates.get(templateId);\n        if (template == null) {\n            System.err.println(\"Template not found: \" + templateId);\n            return;\n        }\n        \n        String message = template.content;\n        if (parameters != null) {\n            for (Map.Entry<String, String> entry : parameters.entrySet()) {\n                message = message.replace(\"{\" + entry.getKey() + \"}\", entry.getValue());\n            }\n        }\n        \n        sendNotification(userId, message, template.type);\n    }\n
-    public void scheduleReminder(String userId, String message, NotificationType type, long delayMillis) {\n        // TODO: Implement scheduling logic (e.g., using Timer, ScheduledExecutorService, or a dedicated queue)\n        System.out.println(\"Scheduling [\" + type + \"] reminder for User [\" + userId + \"] in \" + delayMillis + \"ms: \" + message);\n        // Example: could add to a priority queue with a timestamp\n    }\n
-    public void createTemplate(String templateId, String content, NotificationType type) {\n        // TODO: Implement template creation/storage logic\n        System.out.println(\"Creating template: \" + templateId + \" Type: \" + type);\n        NotificationTemplate newTemplate = new NotificationTemplate();\n        newTemplate.templateId = templateId;\n        newTemplate.content = content;\n        newTemplate.type = type;\n        templates.put(templateId, newTemplate);\n        // Persist template storage if needed\n    }\n    \n    // Example method to process the queue (could be run by a background thread)\n    public void processNotificationQueue() {\n        while (!notificationQueue.isEmpty()) {\n            NotificationJob job = notificationQueue.poll();\n            // TODO: Implement actual sending logic based on job details\n            System.out.println(\"Processing queued [\" + job.type + \"] notification for User [\" + job.userId + \"]: \" + job.message);\n        }\n    }\n    \n    // Method to add to the queue\n    private void queueNotification(String userId, String message, NotificationType type) {\n        NotificationJob job = new NotificationJob();\n        job.userId = userId;\n        job.message = message;\n        job.type = type;\n        notificationQueue.offer(job);\n        System.out.println(\"Queued notification for user: \" + userId);\n        // Potentially notify a processing thread\n    }\n\n    // Getters\n    public Map<String, NotificationTemplate> getTemplates() { return templates; }\n    public Queue<NotificationJob> getNotificationQueue() { return notificationQueue; }\n} 
+package com.medicineordering.notification;
+
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+
+// Enum for Notification Type (used in overloaded method)
+public enum NotificationType {
+    SMS, EMAIL, PUSH
+}
+
+// Placeholder for Template data
+class NotificationTemplate {
+    String templateId;
+    String content;
+    NotificationType type;
+    // ... other template properties
+}
+
+public class NotificationService {
+    private static final NotificationService instance = new NotificationService();
+    private final Map<String, List<String>> userNotifications;
+    private final Map<String, NotificationTemplate> templates;
+    private final Queue<NotificationJob> notificationQueue;
+    private final Map<String, String> notificationTemplates;
+
+    private NotificationService() {
+        this.userNotifications = new HashMap<>();
+        this.templates = new HashMap<>();
+        this.notificationQueue = new LinkedList<>();
+        this.notificationTemplates = new HashMap<>();
+        initializeTemplates();
+    }
+
+    public static NotificationService getInstance() {
+        return instance;
+    }
+
+    public void sendNotification(String userId, String message) {
+        userNotifications.computeIfAbsent(userId, k -> new ArrayList<>()).add(message);
+        System.out.println("Notification sent to user " + userId + ": " + message);
+    }
+
+    public List<String> getNotifications(String userId) {
+        return new ArrayList<>(userNotifications.getOrDefault(userId, new ArrayList<>()));
+    }
+
+    public void clearNotifications(String userId) {
+        userNotifications.remove(userId);
+    }
+
+    public void markNotificationAsRead(String userId, String notification) {
+        List<String> notifications = userNotifications.get(userId);
+        if (notifications != null) {
+            notifications.remove(notification);
+            if (notifications.isEmpty()) {
+                userNotifications.remove(userId);
+            }
+        }
+    }
+
+    // Properties from plan
+    private Map<String, NotificationTemplate> templates; // Key: templateId
+    private Queue<NotificationJob> notificationQueue; // Queue for async processing
+    private Map<String, String> notificationTemplates;
+
+    // Placeholder for job details
+    private static class NotificationJob {
+        String userId;
+        String message;
+        NotificationType type;
+        // ... other details like priority, scheduled time
+    }
+
+    private void initializeTemplates() {
+        notificationTemplates.put("ORDER_CONFIRM_SMS", "Your order #%s has been confirmed");
+        notificationTemplates.put("ORDER_SHIPPED_SMS", "Your order #%s has been shipped");
+        notificationTemplates.put("PRESCRIPTION_VERIFIED_SMS", "Your prescription #%s has been verified");
+        notificationTemplates.put("PAYMENT_RECEIVED_SMS", "Payment of %s received for order #%s");
+    }
+
+    // Methods from plan (including Overloaded Methods)
+    public void sendNotification(String userId, String message, NotificationType type) {
+        System.out.println("Sending [" + type + "] notification to User [" + userId + "]: " + message);
+        queueNotification(userId, message, type);
+    }
+
+    public void sendNotificationFromTemplate(String userId, String templateId, Object... args) {
+        String template = notificationTemplates.get(templateId);
+        if (template != null) {
+            String message = String.format(template, args);
+            sendNotification(userId, message);
+        }
+    }
+
+    public void scheduleReminder(String userId, String message, NotificationType type, long delayMillis) {
+        System.out.println("Scheduling [" + type + "] reminder for User [" + userId + "] in " + delayMillis + "ms: " + message);
+    }
+
+    public void createTemplate(String templateId, String content, NotificationType type) {
+        System.out.println("Creating template: " + templateId + " Type: " + type);
+        NotificationTemplate newTemplate = new NotificationTemplate();
+        newTemplate.templateId = templateId;
+        newTemplate.content = content;
+        newTemplate.type = type;
+        templates.put(templateId, newTemplate);
+    }
+
+    // Example method to process the queue (could be run by a background thread)
+    public void processNotificationQueue() {
+        while (!notificationQueue.isEmpty()) {
+            NotificationJob job = notificationQueue.poll();
+            if (job != null) {
+                sendNotification(job.userId, job.message);
+            }
+        }
+    }
+
+    // Method to add to the queue
+    private void queueNotification(String userId, String message, NotificationType type) {
+        NotificationJob job = new NotificationJob();
+        job.userId = userId;
+        job.message = message;
+        job.type = type;
+        notificationQueue.offer(job);
+        System.out.println("Queued notification for user: " + userId);
+    }
+
+    // Getters
+    public Map<String, NotificationTemplate> getTemplates() { return new HashMap<>(templates); }
+    public Queue<NotificationJob> getNotificationQueue() { return new LinkedList<>(notificationQueue); }
+} 

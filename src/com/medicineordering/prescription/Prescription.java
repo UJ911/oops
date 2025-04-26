@@ -1,77 +1,106 @@
 package com.medicineordering.prescription;
 
+import com.medicineordering.user.Doctor;
+import com.medicineordering.user.Customer;
 import com.medicineordering.inventory.Medicine;
-import java.util.List;
-import java.util.Date;
+import java.util.*;
 
 public class Prescription {
-    
     private String prescriptionId;
-    private String patientId; // Link to Customer userId
-    private String doctorId; // Link to Doctor userId
-    private List<Medicine> medicines; // List of prescribed medicines
-    private Date issuedDate;
+    private Customer customer;
+    private Doctor doctor;
+    private Map<Medicine, PrescriptionDetails> medicines;
+    private Date issueDate;
+    private Date expiryDate;
     private boolean isVerified;
-    private String imagePath; // For uploaded image
+    private String notes;
+    private PrescriptionStatus status;
 
-    // Constructor
-    public Prescription(String prescriptionId, String patientId, String doctorId, List<Medicine> medicines, Date issuedDate) {
-        this.prescriptionId = prescriptionId;
-        this.patientId = patientId;
-        this.doctorId = doctorId;
-        this.medicines = medicines;
-        this.issuedDate = issuedDate;
-        this.isVerified = false; // Prescriptions start as unverified
+    public static class PrescriptionDetails {
+        private int quantity;
+        private String dosage;
+        private String instructions;
+
+        public PrescriptionDetails(int quantity, String dosage, String instructions) {
+            this.quantity = quantity;
+            this.dosage = dosage;
+            this.instructions = instructions;
+        }
+
+        public int getQuantity() { return quantity; }
+        public String getDosage() { return dosage; }
+        public String getInstructions() { return instructions; }
     }
 
-    // Methods from plan
-    public boolean verify(String verifyingDoctorId) {
-        // TODO: Implement verification logic (e.g., check if verifyingDoctorId is valid, maybe check against doctorId?)
-        System.out.println("Attempting to verify prescription " + prescriptionId + " by doctor " + verifyingDoctorId);
-        // For simplicity, just mark as verified. Real logic needed.
+    public Prescription(Customer customer, Doctor doctor) {
+        this.prescriptionId = UUID.randomUUID().toString();
+        this.customer = customer;
+        this.doctor = doctor;
+        this.medicines = new HashMap<>();
+        this.issueDate = new Date();
+        this.expiryDate = calculateExpiryDate();
+        this.isVerified = false;
+        this.status = PrescriptionStatus.PENDING;
+    }
+
+    public void addMedicine(Medicine medicine, int quantity, String dosage, String instructions) {
+        medicines.put(medicine, new PrescriptionDetails(quantity, dosage, instructions));
+    }
+
+    public void verify(Doctor verifyingDoctor) {
+        if (!verifyingDoctor.equals(this.doctor)) {
+            throw new IllegalArgumentException("Only the prescribing doctor can verify this prescription");
+        }
         this.isVerified = true;
-        System.out.println("Prescription " + prescriptionId + " verified.");
-        return true;
+        this.status = PrescriptionStatus.VERIFIED;
     }
 
-    public void uploadImage(String filePath) {
-        // TODO: Implement image upload handling (e.g., save file path, maybe store image data)
-        System.out.println("Uploading image for prescription " + prescriptionId + " from path: " + filePath);
-        this.imagePath = filePath;
-        // In a real system, this would involve file I/O
+    private Date calculateExpiryDate() {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(issueDate);
+        cal.add(Calendar.MONTH, 6); // Prescriptions valid for 6 months by default
+        return cal.getTime();
     }
 
     public String getPrescriptionDetails() {
-        // TODO: Format and return prescription details
         StringBuilder details = new StringBuilder();
-        details.append("Prescription ID: ").append(prescriptionId).append("\n");
-        details.append("Patient ID: ").append(patientId).append("\n");
-        details.append("Doctor ID: ").append(doctorId).append("\n");
-        details.append("Issued Date: ").append(issuedDate).append("\n");
-        details.append("Verified: ").append(isVerified).append("\n");
-        details.append("Image Path: ").append(imagePath != null ? imagePath : "N/A").append("\n");
-        details.append("Medicines:\n");
-        if (medicines != null) {
-            for (Medicine med : medicines) {
-                details.append("  - ").append(med.getName()).append(" (ID: ").append(med.getMedicineId()).append(")\n");
-            }
+        details.append("\n=== Prescription Details ===\n");
+        details.append("ID: ").append(prescriptionId).append("\n");
+        details.append("Patient: ").append(customer.getName()).append("\n");
+        details.append("Doctor: Dr. ").append(doctor.getName()).append("\n");
+        details.append("Issue Date: ").append(issueDate).append("\n");
+        details.append("Expiry Date: ").append(expiryDate).append("\n");
+        details.append("Status: ").append(status).append("\n");
+        details.append("\nPrescribed Medicines:\n");
+
+        for (Map.Entry<Medicine, PrescriptionDetails> entry : medicines.entrySet()) {
+            Medicine medicine = entry.getKey();
+            PrescriptionDetails details = entry.getValue();
+            details.append(String.format("- %s\n", medicine.getName()));
+            details.append(String.format("  Quantity: %d\n", details.getQuantity()));
+            details.append(String.format("  Dosage: %s\n", details.getDosage()));
+            details.append(String.format("  Instructions: %s\n", details.getInstructions()));
         }
+
+        if (!notes.isEmpty()) {
+            details.append("\nNotes: ").append(notes).append("\n");
+        }
+
         return details.toString();
     }
 
-    // Getters and Setters
+    // Getters
     public String getPrescriptionId() { return prescriptionId; }
-    public void setPrescriptionId(String prescriptionId) { this.prescriptionId = prescriptionId; }
-    public String getPatientId() { return patientId; }
-    public void setPatientId(String patientId) { this.patientId = patientId; }
-    public String getDoctorId() { return doctorId; }
-    public void setDoctorId(String doctorId) { this.doctorId = doctorId; }
-    public List<Medicine> getMedicines() { return medicines; }
-    public void setMedicines(List<Medicine> medicines) { this.medicines = medicines; }
-    public Date getIssuedDate() { return issuedDate; }
-    public void setIssuedDate(Date issuedDate) { this.issuedDate = issuedDate; }
+    public Customer getCustomer() { return customer; }
+    public Doctor getDoctor() { return doctor; }
+    public Map<Medicine, PrescriptionDetails> getMedicines() { return Collections.unmodifiableMap(medicines); }
+    public Date getIssueDate() { return issueDate; }
+    public Date getExpiryDate() { return expiryDate; }
     public boolean isVerified() { return isVerified; }
-    public void setIsVerified(boolean isVerified) { this.isVerified = isVerified; }
-    public String getImagePath() { return imagePath; }
-    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+    public String getNotes() { return notes; }
+    public PrescriptionStatus getStatus() { return status; }
+
+    // Setters
+    public void setNotes(String notes) { this.notes = notes; }
+    public void setStatus(PrescriptionStatus status) { this.status = status; }
 } 

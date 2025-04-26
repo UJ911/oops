@@ -61,7 +61,8 @@ public class Customer extends User implements Discountable, PriorityService {
     
     @Override
     public int getPriorityLevel() {
-        return isPremium ? 1 : 0;
+        return isPremium ? 1 : 0;//doesnt tell the user that 1 is premium and 0 is not
+        
     }
     
     // Methods for prescription management

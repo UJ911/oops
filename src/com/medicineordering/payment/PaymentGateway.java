@@ -112,31 +112,21 @@ public class PaymentGateway implements PaymentProcessor {
         }
 
         return String.format(
-                "--- Payment Receipt ---\
-" +
-                "Transaction ID: %s\
-" +
-                "Order ID: %s\
-" +
-                "Amount: %.2f\
-" +
-                "Method: %s\
-" +
-                "Status: %s\
-" +
-                "Date: %s\
-" +
-                "Gateway: %s\
-" +
-                 "---------------------",
+                "--- Payment Receipt ---\n" +
+                "Transaction ID: %s\n" +
+                "Order ID: %s\n" +
+                "Amount: %.2f\n" +
+                "Method: %s\n" +
+                "Status: %s\n" +
+                "Date: %s\n" +
+                "Gateway: %s",
                 entry.transactionId,
                 entry.orderId,
-                entry.amount, // BigDecimal formatting
+                entry.amount,
                 entry.paymentMethod,
                 entry.status,
                 entry.timestamp,
-                gatewayId
-        );
+                gatewayId);
     }
     
     // Helper method for logging (updates existing entry if status changes)

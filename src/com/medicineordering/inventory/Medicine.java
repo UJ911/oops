@@ -13,8 +13,10 @@ public class Medicine {
     private String name;
     private String description;
     private BigDecimal price; // Use BigDecimal
+    private int stockQuantity;
     private boolean requiresPrescription;
-    private int stock;
+    private String manufacturer;
+    private String category;
 
     // Constructors using BigDecimal
     public Medicine(String name, BigDecimal price) {
@@ -25,7 +27,7 @@ public class Medicine {
         this.name = name;
         this.price = price;
         this.requiresPrescription = false; // Default value
-        this.stock = 0; // Default stock
+        this.stockQuantity = 0; // Default stock
         // Generate ID if needed
         // this.medicineId = UUID.randomUUID().toString();
     }
@@ -35,27 +37,30 @@ public class Medicine {
         this.requiresPrescription = requiresPrescription;
     }
     
-    public Medicine(String medicineId, String name, String description, BigDecimal price, boolean requiresPrescription, int stock) {
+    public Medicine(String medicineId, String name, String description, BigDecimal price, 
+                   int stockQuantity, boolean requiresPrescription, String manufacturer, String category) {
         this(name, price, requiresPrescription);
         if (medicineId == null || medicineId.trim().isEmpty()) {
              throw new IllegalArgumentException("Medicine ID cannot be empty");
         }
-         if (stock < 0) {
+         if (stockQuantity < 0) {
              throw new IllegalArgumentException("Stock cannot be negative");
         }
         this.medicineId = medicineId;
         this.description = description;
-        this.stock = stock;
+        this.stockQuantity = stockQuantity;
+        this.manufacturer = manufacturer;
+        this.category = category;
     }
 
     // Methods
     public boolean checkStock(int quantity) {
-        return this.stock >= quantity;
+        return this.stockQuantity >= quantity;
     }
 
     public String getDetails() {
         return String.format("ID: %s, Name: %s, Price: %.2f, Stock: %d, Requires Prescription: %b", 
-                              medicineId, name, price, stock, requiresPrescription);
+                              medicineId, name, price, stockQuantity, requiresPrescription);
     }
 
     // Updated to throw exception if stock is insufficient
@@ -63,21 +68,21 @@ public class Medicine {
         if (quantity <= 0) {
              throw new IllegalArgumentException("Quantity to decrease must be positive.");
         }
-        if (this.stock < quantity) {
+        if (this.stockQuantity < quantity) {
             throw new MedicineOutOfStockException(this.name);
         }
-        System.out.println("Decreasing stock for " + name + " by " + quantity + ". Old stock: " + stock);
-        this.stock -= quantity;
-        System.out.println("New stock: " + this.stock);
+        System.out.println("Decreasing stock for " + name + " by " + quantity + ". Old stock: " + stockQuantity);
+        this.stockQuantity -= quantity;
+        System.out.println("New stock: " + this.stockQuantity);
     }
     
     public synchronized void increaseStock(int quantity) {
          if (quantity <= 0) {
              throw new IllegalArgumentException("Quantity to increase must be positive.");
         }
-        System.out.println("Increasing stock for " + name + " by " + quantity + ". Old stock: " + stock);
-        this.stock += quantity;
-         System.out.println("New stock: " + this.stock);
+        System.out.println("Increasing stock for " + name + " by " + quantity + ". Old stock: " + stockQuantity);
+        this.stockQuantity += quantity;
+         System.out.println("New stock: " + this.stockQuantity);
     }
 
     // Getters and Setters
@@ -91,7 +96,15 @@ public class Medicine {
     public void setPrice(BigDecimal price) { this.price = price; }
     public boolean isRequiresPrescription() { return requiresPrescription; }
     public void setRequiresPrescription(boolean requiresPrescription) { this.requiresPrescription = requiresPrescription; }
-    public int getStock() { return stock; }
+    public int getStockQuantity() { return stockQuantity; }
+    public String getManufacturer() { return manufacturer; }
+    public String getCategory() { return category; }
     // Removed setStock to enforce updates via increase/decrease methods
     // public void setStock(int stock) { this.stock = stock; }
+
+    @Override
+    public String toString() {
+        return String.format("Medicine[id=%s, name=%s, price=%.2f, inStock=%d]",
+            medicineId, name, price, stockQuantity);
+    }
 } 

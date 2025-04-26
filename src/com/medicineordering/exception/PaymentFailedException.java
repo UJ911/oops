@@ -1,6 +1,6 @@
 package com.medicineordering.exception;
 
-public class PaymentFailedException extends PharmacyException {
+public class PaymentFailedException extends Exception {
     public PaymentFailedException(String message) {
         super(message);
     }
